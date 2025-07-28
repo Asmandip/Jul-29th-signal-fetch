@@ -9,11 +9,18 @@ from telegram_bot import send_telegram_message
 load_dotenv()
 
 async def fetch_symbols():
-    url = "https://api.bitget.com/api/v2/mix/market/tickers?productType=umcbl"
-    async with aiohttp.ClientSession() as session:
-        async with session.get(url) as resp:
-            data = await resp.json()
-            return [item['symbol'] for item in data['data'][:100]]
+    url = "https://api.bitget.com/api/v2/market/tickers?productType=umcbl"
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url) as resp:
+                data = await resp.json()
+                if not data or 'data' not in data:
+                    logging.error("❌ Bitget API returned no data or malformed response")
+                    return []
+                return [item['symbol'] for item in data['data'][:100]]
+    except Exception as e:
+        logging.error(f"❌ Bitget ticker fetch failed: {e}")
+        return []
 
 async def run_scanner():
     symbols = await fetch_symbols()
