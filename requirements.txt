@@ -1,0 +1,10 @@
+aiohttp
+pandas
+python-dotenv
+ta
+flask
+pymongo
+requests
+numpy
+scikit-learn
+joblib
