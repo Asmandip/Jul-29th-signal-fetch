@@ -6,7 +6,8 @@ import logging
 logging.basicConfig(level=logging.INFO)
 
 async def fetch_symbols():
-    url = "https://api.bitget.com/api/v2/mix/market/tickers?productType=umcbl"
+    url = "https://api.bitget.com/api/v2/mix/market/tickers"
+params = {"productType": "umcbl"}"
     try:
         async with aiohttp.ClientSession() as session:
             async with session.get(url) as response:
