@@ -17,6 +17,7 @@ async def fetch_symbols():
                 if not data or 'data' not in data:
                     logging.error("❌ Bitget API returned no data or malformed response")
                     return []
+logging.info(f"✅ Bitget raw data: {data}")
                 return [item['symbol'] for item in data['data'][:100]]
     except Exception as e:
         logging.error(f"❌ Bitget ticker fetch failed: {e}")
