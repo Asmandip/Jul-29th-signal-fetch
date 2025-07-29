@@ -7,10 +7,11 @@ logging.basicConfig(level=logging.INFO)
 
 async def fetch_symbols():
     url = "https://api.bitget.com/api/v2/mix/market/tickers"
-params = {"productType": "umcbl"}
+    params = {"productType": "umcbl"}  # ← ঠিক করা হয়েছে
+
     try:
         async with aiohttp.ClientSession() as session:
-            async with session.get(url) as response:
+            async with session.get(url, params=params) as response:
                 data = await response.json()
                 logging.info(f"✅ Bitget raw data: {data}")
                 if "data" in data:
