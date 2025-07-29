@@ -1,4 +1,3 @@
-### signal_generator.py
 import aiohttp
 import pandas as pd
 from ta.momentum import RSIIndicator
@@ -13,35 +12,64 @@ async def fetch_klines(symbol):
             return data['data']
 
 def apply_indicators(df):
-    df['close'] = df['close'].astype(float)
-    rsi = RSIIndicator(df['close'], window=14)
-    macd = MACD(df['close'])
-    ema = EMAIndicator(df['close'], window=21)
-    atr = AverageTrueRange(df['high'], df['low'], df['close'], window=14)
-    df['rsi'] = rsi.rsi()
-    df['macd'] = macd.macd_diff()
-    df['ema'] = ema.ema_indicator()
-    df['atr'] = atr.average_true_range()
+    df.columns = ['timestamp', 'open', 'high', 'low', 'close', 'volume']
+    df[['open', 'high', 'low', 'close', 'volume']] = df[['open', 'high', 'low', 'close', 'volume']].astype(float)
+
+    df['rsi'] = RSIIndicator(df['close'], window=14).rsi()
+    df['macd'] = MACD(df['close']).macd_diff()
+    df['ema'] = EMAIndicator(df['close'], window=21).ema_indicator()
+    df['atr'] = AverageTrueRange(df['high'], df['low'], df['close'], window=14).average_true_range()
+    df['candle'] = df['close'] - df['open']  # Bullish if positive
+    df['volume_change'] = df['volume'].pct_change()
+
     return df
 
 async def generate_signal(symbol):
     try:
         raw_data = await fetch_klines(symbol)
-        df = pd.DataFrame(raw_data, columns=['timestamp','open','high','low','close','volume'])
+        df = pd.DataFrame(raw_data)
         df = apply_indicators(df)
+        latest = df.iloc[-1]
 
-        rsi = df['rsi'].iloc[-1]
-        macd = df['macd'].iloc[-1]
-        ema = df['ema'].iloc[-1]
-        price = float(df['close'].iloc[-1])
+        # Indicators
+        rsi = latest['rsi']
+        macd = latest['macd']
+        ema = latest['ema']
+        price = latest['close']
+        candle = latest['candle']
+        volume_change = latest['volume_change']
 
         confirmations = 0
-        if rsi < 30: confirmations += 1
-        if macd > 0: confirmations += 1
-        if price > ema: confirmations += 1
+        reasons = []
 
-        if confirmations >= 2:
-            return f"✅ Signal: {symbol}\nPrice: {price}\nRSI: {rsi:.2f}\nMACD: {macd:.4f}\nEMA: {ema:.2f}"
+        if rsi < 30:
+            confirmations += 1
+            reasons.append("🔽 RSI Oversold")
+
+        if macd > 0:
+            confirmations += 1
+            reasons.append("📈 MACD Bullish")
+
+        if price > ema:
+            confirmations += 1
+            reasons.append("📊 Above EMA")
+
+        if candle > 0:
+            confirmations += 1
+            reasons.append("🕯️ Bullish Candle")
+
+        if volume_change > 0.05:
+            confirmations += 1
+            reasons.append("💥 Volume Surge")
+
+        if confirmations >= 4:
+            return (
+                f"✅ Buy Signal on {symbol}\n"
+                f"📍 Price: {price:.4f}\n"
+                f"📊 RSI: {rsi:.2f}, MACD: {macd:.4f}, EMA: {ema:.2f}\n"
+                f"🧠 Confirmations: {confirmations} - {', '.join(reasons)}"
+            )
+
     except Exception as e:
         print(f"Error for {symbol}: {e}")
     return None
